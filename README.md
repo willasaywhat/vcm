@@ -11,8 +11,13 @@ very complete management (a pentest tool for organizing things)
 * vcm run nikto
 * vcm run testssl
 
+## Installation
+* Make vcm.py executable
+* Copy to path
+* Run commands (except `create`) from within projects directory
+
 ## Dependencies
-* Python 2.7
+* Python 3.6.8
 * rsync
 * openssl binary (change location in the code)
 * aha (brew install aha)
