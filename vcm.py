@@ -3,10 +3,10 @@
 import click
 import os
 from pipes import quote
-import ConfigParser
+import configparser
 from subprocess import call
 import subprocess
-from urlparse import urlparse
+from urllib.parse import urlparse
 import re
 
 # Settings (TODO: Move this to a global config file.)
@@ -37,7 +37,7 @@ def create():
         try:
             os.makedirs(local_folder)
         except:
-            print "Error creating local folder: %s" % local_folder
+            print(f"Error creating local folder: {local_folder}")
             return
     # create logistics, artifacts, and reports directories
     for folder in ['reports', 'artifacts', 'logistics']:
@@ -45,32 +45,35 @@ def create():
             try:
                 os.makedirs(os.path.join(local_folder, folder))
             except:
-                print "Error creating subfolder: %s" % os.path.join(local_folder, folder)
+                subfolder = ospath.join(local_folder, folder)
+                print(f"Error creating subfolder: {subfolder}")
                 return
     # write config file to .vcm in the root
-    my_config = ConfigParser.RawConfigParser()
+    my_config = configparser.RawConfigParser()
     my_config.add_section('ProjectSettings')
     my_config.set('ProjectSettings', 'project_name', project_name)
     my_config.set('ProjectSettings', 'local_path', os.path.join(local_folder, ''))
     my_config.set('ProjectSettings', 'remote_path', os.path.join(remote_folder, ''))
     my_config.set('ProjectSettings', 'url_targets', url_targets)
-    with open(os.path.join(local_folder, '.vcm'), 'wb') as configfile:
+    with open(os.path.join(local_folder, '.vcm'), 'w') as configfile:
         try:
             my_config.write(configfile)
         except:
-            print "Error writing config file: %s" % os.path.join(local_folder, '.vcm')
+            vcmfolder = os.path.join(local_folder, '.vcm')
+            print(f"Error writing config file: {vcmfolder}")
             return
 
 
 @vcm.command()
 def push():
     # ensure the remote dir is mounted
-    read_config = ConfigParser.RawConfigParser()
+    read_config = configparser.RawConfigParser()
 
     cf = read_config.read('.vcm')
 
     if len(cf) == 0:
-        print "Unable to read config file: %s" % os.path.join(os.getcwd(), '.vcm')
+        configfile = os.path.join(os.getcwd(), '.vcm')
+        print(f"Unable to read config file: {configfile}")
         return
 
     remote_folder = read_config.get('ProjectSettings', 'remote_path')
@@ -86,12 +89,13 @@ def push():
 def pull():
     # ensure the remote dir is mounted
     # do an rsync -ah from remote to local
-    read_config = ConfigParser.RawConfigParser()
+    read_config = configparser.RawConfigParser()
 
     cf = read_config.read('.vcm')
 
     if len(cf) == 0:
-        print "Unable to read config file: %s" % os.path.join(os.getcwd(), '.vcm')
+        configfile = os.path.join(os.getcwd(), '.vcm')
+        print(f"Unable to read config file: {configfile}")
         return
 
     remote_folder = read_config.get('ProjectSettings', 'remote_path')
@@ -112,12 +116,13 @@ def run():
 @run.command()
 def nmap():
     # check if url .vcm setting is set and is valid csv first; strip protocol if exists
-    read_config = ConfigParser.RawConfigParser()
+    read_config = configparser.RawConfigParser()
 
     cf = read_config.read('.vcm')
 
     if len(cf) == 0:
-        print "Unable to read config file: %s" % os.path.join(os.getcwd(), '.vcm')
+        configfile = os.path.join(os.getcwd(), '.vcm')
+        print(f"Unable to read config file: {configfile}")
         return
 
     local_folder = read_config.get('ProjectSettings', 'local_path')
@@ -127,7 +132,7 @@ def nmap():
     for t in url_targets:
         targets.append(urlparse(t).netloc)
 
-    print "Please note, this will only work if the url targets have been set to a comma delimited set of URLs with scheme."
+    print("Please note, this will only work if the url targets have been set to a comma delimited set of URLs with scheme.")
     if click.confirm('Run nmap against the following targets: %s' % ', '.join(targets)):
         args = ["nmap", "-sV", "-p-"]
         for t in targets:
@@ -143,18 +148,19 @@ def nmap():
 @run.command()
 def nikto():
     # check if url .vcm setting is set and is valid csv first
-    read_config = ConfigParser.RawConfigParser()
+    read_config = configparser.RawConfigParser()
 
     cf = read_config.read('.vcm')
 
     if len(cf) == 0:
-        print "Unable to read config file: %s" % os.path.join(os.getcwd(), '.vcm')
+        configfile = os.path.join(os.getcwd(), '.vcm')
+        print(f"Unable to read config file: {configfile}")
         return
 
     local_folder = read_config.get('ProjectSettings', 'local_path')
     url_targets = re.split(",\s?", read_config.get('ProjectSettings', 'url_targets'))
 
-    print "Please note, this will only work if the url targets have been set to a comma delimited set of URLs with scheme."
+    print("Please note, this will only work if the url targets have been set to a comma delimited set of URLs with scheme.")
     if click.confirm('Run nikto against the following targets: %s' % ', '.join(url_targets)):
         try:
             # nikto -h https://www.test.com -ssl -Format html -output .
@@ -167,10 +173,10 @@ def nikto():
             args.append('html')
             args.append('-output')
             args.append(os.path.join(local_folder, 'artifacts', 'nikto'))
-            print args
+            print(args)
             call(args)
         except:
-            print "Error writing nikto output to: %s" % filename
+            print(f"Error writing nikto output to: {filename}")
     else:
         pass
 
@@ -178,12 +184,13 @@ def nikto():
 @run.command()
 def testssl():
     # check if url .vcm setting is set and is valid csv first
-    read_config = ConfigParser.RawConfigParser()
+    read_config = configparser.RawConfigParser()
 
     cf = read_config.read('.vcm')
 
     if len(cf) == 0:
-        print "Unable to read config file: %s" % os.path.join(os.getcwd(), '.vcm')
+        configfile = os.path.join(os.getcwd(), '.vcm')
+        print(f"Unable to read config file: {configfile}")
         return
 
     local_folder = read_config.get('ProjectSettings', 'local_path')
@@ -193,7 +200,7 @@ def testssl():
     for t in url_targets:
         targets.append('https://'+urlparse(t).netloc)
 
-    print "Please note, this will only work if the url targets have been set to a comma delimited set of URLs with scheme."
+    print("Please note, this will only work if the url targets have been set to a comma delimited set of URLs with scheme.")
     if click.confirm('Run testssl against the following targets: %s' % ', '.join(targets)):
         for t in targets:
             try:
@@ -204,7 +211,7 @@ def testssl():
                     aha = subprocess.Popen(["aha"], stdin=testssl.stdout, stdout=f)
                     aha.wait()
             except:
-                print "Error writing testssl output to: %s" % filename
+                print(f"Error writing testssl output to: {filename}")
     else:
         pass
 
@@ -212,12 +219,13 @@ def testssl():
 @run.command()
 def dirb():
     # check if url .vcm setting is set and is valid csv first
-    read_config = ConfigParser.RawConfigParser()
+    read_config = configparser.RawConfigParser()
 
     cf = read_config.read('.vcm')
 
     if len(cf) == 0:
-        print "Unable to read config file: %s" % os.path.join(os.getcwd(), '.vcm')
+        configfile = os.path.join(os.getcwd(), '.vcm')
+        print(f"Unable to read config file: {configfile}")
         return
 
     local_folder = read_config.get('ProjectSettings', 'local_path')
@@ -227,7 +235,7 @@ def dirb():
     for t in url_targets:
         targets.append(t)
 
-    print "Please note, this will only work if the url targets have been set to a comma delimited set of URLs with scheme."
+    print("Please note, this will only work if the url targets have been set to a comma delimited set of URLs with scheme.")
     if click.confirm('Run dirb against the following targets: %s' % ', '.join(targets)):
         for t in targets:
             try:
@@ -236,10 +244,10 @@ def dirb():
                 args = ["dirb", t]
                 args.append('-o')
                 args.append(filename)
-                print args
+                print(args)
                 call(args)
             except:
-                print "Error writing dirb output to: %s" % filename
+                print(f"Error writing dirb output to: {filename}")
     else:
         pass
 
