@@ -8,7 +8,7 @@ import subprocess
 import re
 
 GLOBAL_CONFIG_LOCATION = '~/.vcm'
-DEFAULT_NMAP_SETTINGS = ["-sV", "-p1-80"]
+DEFAULT_NMAP_SETTINGS = ["-sV", "-p-"]
 
 global_settings = None
 
@@ -60,10 +60,12 @@ class VcmProjectConfig:
     def __init__(self):
         read_config = configparser.RawConfigParser()
 
-        cf = read_config.read('.vcm')
+        project_filename = os.path.join(os.getcwd(), '.vcm')
+
+        cf = read_config.read(project_filename)
 
         if len(cf) == 0:
-            raise Exception("Unable to read config file: %s" % os.path.join(os.getcwd(), '.vcm'))
+            raise Exception(f"Unable to read config file: {project_filename}")
 
         self.remote_folder = read_config.get('ProjectSettings', 'remote_path')
         self.local_folder = read_config.get('ProjectSettings', 'local_path')
@@ -71,7 +73,8 @@ class VcmProjectConfig:
         url_targets = re.split(",", read_config.get('ProjectSettings', 'url_targets'))
 
         for t in url_targets:
-            self.targets.append(t.strip())
+            if len(t.strip()) > 0:
+                self.targets.append(t.strip())
 
 
 @click.group()
@@ -118,7 +121,6 @@ def create():
         try:
             my_config.write(configfile)
         except configparser.Error as ex:
-
             print(f"Error writing config file: {vcmfolder} : {ex.message}")
             return
 
@@ -190,9 +192,10 @@ def nikto():
           "scheme. ")
 
     if click.confirm('Run nikto against the following targets: %s' % ', '.join(project_config.targets)):
+        output_filename = os.path.join(project_config.local_folder, 'artifacts', 'nikto')
+
         try:
             # nikto -h https://www.test.com -ssl -Format html -output .
-            filename = os.path.join(project_config.local_folder, 'artifacts', 'nikto')
             args = ["nikto", "-h"]
 
             for t in project_config.targets:
@@ -202,12 +205,12 @@ def nikto():
             args.append('-Format')
             args.append('html')
             args.append('-output')
-            args.append(os.path.join(project_config.local_folder, 'artifacts', 'nikto'))
+            args.append(output_filename)
 
             print(args)
             call(args)
         except Exception as ex:
-            print(f"Error writing nikto output to: {filename} : {ex}")
+            print(f"Error writing nikto output to: {output_filename} : {ex}")
     else:
         pass
 
@@ -226,10 +229,10 @@ def testssl():
 
     if click.confirm('Run testssl against the following targets: %s' % ', '.join(https_targets)):
         for t in https_targets:
-            filename = os.path.join(project_config.local_folder, 'artifacts', 'testssl_' +
+            output_filename = os.path.join(project_config.local_folder, 'artifacts', 'testssl_' +
                                     str(https_targets.index(t))) + '.html'
             try:
-                with open(filename, 'w') as f:
+                with open(output_filename, 'w') as f:
                     args_testssl = ["testssl.sh", "--openssl", global_settings.open_ssl_binary, t]
 
                     testssl_process = subprocess.Popen(args_testssl, stdout=subprocess.PIPE)
@@ -237,7 +240,7 @@ def testssl():
                     aha.wait()
 
             except Exception as ex:
-                print(f"Error writing testssl output to: {filename} : {ex}")
+                print(f"Error writing testssl output to: {output_filename} : {ex}")
     else:
         pass
 
@@ -252,16 +255,16 @@ def dirb():
 
     if click.confirm('Run dirb against the following targets: %s' % ', '.join(project_config.targets)):
         for t in project_config.targets:
-            dirb_filename = os.path.join(project_config.local_folder, 'artifacts', 'dirb_' +
+            output_filename = os.path.join(project_config.local_folder, 'artifacts', 'dirb_' +
                                          str(project_config.targets.index(t))) + '.txt'
             try:
                 # dirb url -o output.txt
 
-                args = ["dirb", t, '-o', dirb_filename]
+                args = ["dirb", t, '-o', output_filename]
                 call(args)
 
             except Exception as ex:
-                print(f"Error writing dirb output to: {dirb_filename} : {ex}")
+                print(f"Error writing dirb output to: {output_filename} : {ex}")
     else:
         pass
 
