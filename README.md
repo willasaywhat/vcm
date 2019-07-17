@@ -10,6 +10,7 @@ very complete management (a pentest tool for organizing things)
 * vcm run nmap
 * vcm run nikto
 * vcm run testssl
+* vcm run dirb
 
 ## Installation
 * Make vcm.py executable
@@ -20,7 +21,6 @@ very complete management (a pentest tool for organizing things)
 * Python 3.6.8
 * rsync
 * openssl binary (change location in the code)
-* aha (brew install aha)
 * testssl (brew install testssl)
 * nmap (brew install nmap)
 * python modules (pip install -r requirements.txt)
