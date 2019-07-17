@@ -1,7 +1,9 @@
 # vcm
 very complete management (a pentest tool for organizing things)
 
+## Settings storage
 Global settings are stored in ~/.vcm by default.
+
 Project settings are stored in ./.vcm in the project directory
 
 ## Project Management & File Syncing
