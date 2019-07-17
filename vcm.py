@@ -87,7 +87,6 @@ class VcmProjectConfig:
         url_targets = re.split(",", project_config.get('ProjectSettings', 'url_targets'))
 
         for t in url_targets:
-
             stripped_target = t.strip()
 
             # The requirement is for targets to have a scheme - even if you're just
@@ -268,7 +267,6 @@ def testssl():
         return
 
     for t in https_targets:
-
         output_filename = os.path.join(project_config.artifacts_folder, f"testssl_{urlparse(t).netloc}_{time.time()}.txt")
 
         try:
