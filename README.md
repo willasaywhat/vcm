@@ -12,7 +12,7 @@ Project settings are stored in ./.vcm in the project directory
 * vcm push - rsyncs to a remote folder from the local project folder
 
 ## Tool Execution & Artifact Storage
-Filenemes have an epoch time suffix for historical versioning 
+Filenames have an epoch time suffix for historical versioning 
 * vcm run nmap - uses default arguments -sV -p-
 * vcm run nikto 
 * vcm run testssl - uses /usr/bin/openssl as the default but can be overridden in global settings
