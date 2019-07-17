@@ -2,9 +2,9 @@
 from urllib.parse import urlparse
 import click
 import os
+import time
 import configparser
 from subprocess import call
-import subprocess
 import re
 
 GLOBAL_CONFIG_LOCATION = '~/.vcm'
@@ -63,6 +63,9 @@ class VcmProjectConfig:
     targets = []
     target_urls = []
 
+    # derived directories
+    artifacts_folder = ''
+
     def __init__(self):
         pass
 
@@ -79,6 +82,8 @@ class VcmProjectConfig:
         self.remote_folder = project_config.get('ProjectSettings', 'remote_path')
         self.local_folder = project_config.get('ProjectSettings', 'local_path')
 
+        self.artifacts_folder = os.path.join(self.local_folder, 'artifacts')
+
         url_targets = re.split(",", project_config.get('ProjectSettings', 'url_targets'))
 
         for t in url_targets:
@@ -93,8 +98,8 @@ class VcmProjectConfig:
                 self.target_urls.append(target_url)
 
                 if not bool(target_url.scheme):
-                    raise ValueError(f"URL found without scheme: {stripped_target}. Please note, schemes are required "
-                                     "for all URLs")
+                    raise ValueError(
+                        f"URL found without scheme: {stripped_target}. Please note, schemes are required for all URLs")
 
                 self.targets.append(t)
 
@@ -192,7 +197,6 @@ def run():
 
 @run.command()
 def nmap():
-    # check if url .vcm setting is set and is valid csv first; strip protocol if exists
     try:
         project_config = VcmProjectConfig()
         project_config.read_project_vcm()
@@ -200,28 +204,27 @@ def nmap():
         print(ex)
         return
 
+    # We only need the netloc of the full url - strip the rest out
     nmap_targets = []
     for t in project_config.targets:
         nmap_targets.append(urlparse(t).netloc)
 
-    if click.confirm('Run nmap against the following targets: %s' % ', '.join(nmap_targets)):
-        args = ["nmap"]
-        args.extend(DEFAULT_NMAP_SETTINGS)
+    if not click.confirm('Run nmap against the following targets: %s' % ', '.join(nmap_targets)):
+        return
 
-        for t in nmap_targets:
-            args.append(t)
+    args = ["nmap"]
+    args.extend(DEFAULT_NMAP_SETTINGS)
 
-        args.append("-oA")
-        args.append(os.path.join(project_config.local_folder, 'artifacts', 'nmap'))
-        call(args)
-    else:
-        pass
+    for t in nmap_targets:
+        args.append(t)
+
+    args.append("-oA")
+    args.append(os.path.join(project_config.artifacts_folder, f'nmap_{time.time()}'))
+    call(args)
 
 
-# TODO: FIX THIS TO ITERATE OVER URLS LIKE DIRB DOES
 @run.command()
 def nikto():
-    # check if url .vcm setting is set and is valid csv first
     try:
         project_config = VcmProjectConfig()
         project_config.read_project_vcm()
@@ -229,33 +232,27 @@ def nikto():
         print(ex)
         return
 
-    if click.confirm('Run nikto against the following targets: %s' % ', '.join(project_config.targets)):
-        output_filename = os.path.join(project_config.local_folder, 'artifacts', 'nikto')
+    if not click.confirm('Run nikto against the following targets: %s' % ', '.join(project_config.targets)):
+        return
 
+    # Nikto takes multiple hosts from a file
+    # BUT bear in mind advice from: https://github.com/sullo/nikto/wiki/Basic-Testing
+    # ie run scans separately so that memory is freed each time.
+    for t in project_config.targets:
+        output_filename = os.path.join(project_config.artifacts_folder,
+                                       f"nikto_{urlparse(t).netloc}_{time.time()}.html")
         try:
             # nikto -h https://www.test.com -ssl -Format html -output .
-            args = ["nikto", "-h"]
-
-            for t in project_config.targets:
-                args.append(t + ',')
-
-            args.append('-ssl')
-            args.append('-Format')
-            args.append('html')
-            args.append('-output')
-            args.append(output_filename)
+            args = ["nikto", "-h", t, '-ssl', '-Format', 'html', '-output', output_filename]
 
             print(args)
             call(args)
         except Exception as ex:
             print(f"Error writing nikto output to: {output_filename} : {ex}")
-    else:
-        pass
 
 
 @run.command()
 def testssl():
-    # check if url .vcm setting is set and is valid csv first
     try:
         project_config = VcmProjectConfig()
         project_config.read_project_vcm()
@@ -267,22 +264,21 @@ def testssl():
     for t in project_config.targets:
         https_targets.append('https://' + urlparse(t).netloc)
 
-    if click.confirm('Run testssl against the following targets: %s' % ', '.join(https_targets)):
-        for t in https_targets:
-            output_filename = os.path.join(project_config.local_folder, 'artifacts', 'testssl_' +
-                                           str(https_targets.index(t))) + '.html'
-            try:
-                with open(output_filename, 'w') as f:
-                    args_testssl = ["testssl.sh", "--openssl", global_config.open_ssl_binary, t]
+    if not click.confirm('Run testssl against the following targets: %s' % ', '.join(https_targets)):
+        return
 
-                    testssl_process = subprocess.Popen(args_testssl, stdout=subprocess.PIPE)
-                    aha = subprocess.Popen(["aha"], stdin=testssl_process.stdout, stdout=f)
-                    aha.wait()
+    for t in https_targets:
 
-            except Exception as ex:
-                print(f"Error writing testssl output to: {output_filename} : {ex}")
-    else:
-        pass
+        output_filename = os.path.join(project_config.artifacts_folder, f"testssl_{urlparse(t).netloc}_{time.time()}.txt")
+
+        try:
+            args = ["testssl.sh", "--openssl", global_config.open_ssl_binary, "--logfile", output_filename, t]
+
+            print(args)
+            call(args)
+
+        except Exception as ex:
+            print(f"Error writing testssl output to: {output_filename} : {ex}")
 
 
 @run.command()
@@ -294,20 +290,19 @@ def dirb():
         print(ex)
         return
 
-    if click.confirm('Run dirb against the following targets: %s' % ', '.join(project_config.targets)):
-        for t in project_config.targets:
-            output_filename = os.path.join(project_config.local_folder, 'artifacts', 'dirb_' +
-                                           str(project_config.targets.index(t))) + '.txt'
-            try:
-                # dirb url -o output.txt
+    if not click.confirm('Run dirb against the following targets: %s' % ', '.join(project_config.targets)):
+        return
 
-                args = ["dirb", t, '-o', output_filename]
-                call(args)
+    for t in project_config.targets:
+        output_filename = os.path.join(project_config.artifacts_folder,
+                                       'dirb_' + str(project_config.targets.index(t))) + '.txt'
+        try:
+            # dirb url -o output.txt
+            args = ["dirb", t, '-o', output_filename]
+            call(args)
 
-            except Exception as ex:
-                print(f"Error writing dirb output to: {output_filename} : {ex}")
-    else:
-        pass
+        except Exception as ex:
+            print(f"Error writing dirb output to: {output_filename} : {ex}")
 
 
 if __name__ == '__main__':
