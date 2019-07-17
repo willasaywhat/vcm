@@ -1,16 +1,20 @@
 # vcm
 very complete management (a pentest tool for organizing things)
 
+Global settings are stored in ~/.vcm by default.
+Project settings are stored in ./.vcm in the project directory
+
 ## Project Management & File Syncing
-* vcm create
-* vcm pull
-* vcm push
+* vcm create - creates a folder with appropriate subfolders and project settings
+* vcm pull - rsyncs from a remote folder to the local project folder
+* vcm push - rsyncs to a remote folder from the local project folder
 
 ## Tool Execution & Artifact Storage
-* vcm run nmap
-* vcm run nikto
-* vcm run testssl
-* vcm run dirb
+Filenemes have an epoch time suffix for historical versioning 
+* vcm run nmap - uses default arguments -sV -p-
+* vcm run nikto 
+* vcm run testssl - uses /usr/bin/openssl as the default but can be overridden in global settings
+* vcm run dirb - uses the default wordlist
 
 ## Installation
 * Make vcm.py executable
