@@ -7,7 +7,7 @@ Global settings are stored in ~/.vcm by default.
 Project settings are stored in ./.vcm in the project directory
 
 ## Project Management & File Syncing
-* vcm create - creates a folder with appropriate subfolders and project settings
+* vcm create - creates a project folder with appropriate subfolders and project settings
 * vcm pull - rsyncs from a remote folder to the local project folder
 * vcm push - rsyncs to a remote folder from the local project folder
 
@@ -21,7 +21,8 @@ Filenames have an epoch time suffix for historical versioning
 ## Installation
 * Make vcm.py executable
 * Copy to path
-* Run commands (except `create`) from within projects directory
+* Run vcm create to create a new project directory and configuration file
+* Run commands from within projects directory
 
 ## Dependencies
 * Python 3.6.8
